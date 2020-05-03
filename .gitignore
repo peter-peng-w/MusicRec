@@ -1,0 +1,4 @@
+# Data is currently ignored for remote repo
+./Data/*
+.DS_Store
+.vscode/
