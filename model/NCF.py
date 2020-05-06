@@ -34,7 +34,11 @@ class NCF(nn.Module):
         else:
             # concate
             predict_size = factor_num * 2
+        # If we use the model of single MLP and singl MF, then the input size of the predict layer
+        # is 1 side of factor_num. If we use the double tower strcuture of the model, the the input
+        # size of the model is the concated size (twice of the factor_num).
         self.predict_layer = nn.Linear(predict_size, 1)
+        self._init_weight()
 
 
     def _make_layer(
@@ -45,8 +49,8 @@ class NCF(nn.Module):
         for i in range(num_layers):
             mlp_output_size = mlp_input_size // 2
             MLP_layers.append(nn.Dropout(p=self.dropout))
-            MLP_layers.append(nn.Linear(mlp_input_size, mlp_output_size)
-            MLP_layers.append(nn.BatchNorm1d)
+            MLP_layers.append(nn.Linear(mlp_input_size, mlp_output_size))
+            MLP_layers.append(nn.BatchNorm1d(num_features=mlp_output_size))
             MLP_layers.append(nn.ReLU())
             mlp_input_size = mlp_output_size
 
@@ -64,7 +68,9 @@ class NCF(nn.Module):
                 if isinstance(m, nn.Linear):
                     # nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
                     nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
-            # NOTE: Leave predict layer here
+            
+            # NOTE: for predict layer, since we should expect a sigmoid, we use this
+            nn.init.kaiming_uniform_(self.predict_layer.weight, a=1, nonlinearity='sigmoid')
 
             # for m in self.modules():
             #     if isinstance(m, nn.Linear):
@@ -81,7 +87,7 @@ class NCF(nn.Module):
             self.embed_user_MLP.weight.data.copy_(self.MLP_model.embed_user_MLP.weight)
             
             # Copy pretrained weight and bias of MLP layers
-            for (m, m_pre) in zip(self.MLP_layers, self.MLP_model.MLP_layers)
+            for (m, m_pre) in zip(self.MLP_layers, self.MLP_model.MLP_layers):
                 if isinstance(m, nn.Linear) and isinstance(m_pre, nn.Linear):
                     m.weight.data.copy_(m_pre.weight)
                     m.bias.data.copy_(m_pre.bias)
@@ -93,8 +99,7 @@ class NCF(nn.Module):
             self.predict_layer.weight.data.copy_(0.5 * predict_weight)
             self.predict_layer.bias.data.copy_(0.5 * predict_bias)
 
-    def forward(
-            self, user, item):
+    def forward(self, user, item):
         if self.model == 'GMF':
             # NOTE: here the input of embedding layer is a LongTensor 
             # arbitrary shape containing the indices to extract

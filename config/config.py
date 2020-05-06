@@ -24,6 +24,11 @@ config = {
         'train_size': 3180066,
         'val_size': 97128,
         'test_size': 96737
-    }
+    },
 
+    'model_cur': 'MLP',
+    'GMF_model': '../train_results/GMF.pth',
+    'MLP_model': '../train_results/MLP.pth',
+    'NMF_model': '../train_results/NMF.pth',
+    'NMF-pre_model': '../train_results/NMF-pre.pth'
 }
